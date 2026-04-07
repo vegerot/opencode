@@ -19,6 +19,8 @@ import { useCommand } from "@/context/command"
 import { useFile, type SelectedLineRange } from "@/context/file"
 import { useLanguage } from "@/context/language"
 import { useLayout } from "@/context/layout"
+import { usePlatform } from "@/context/platform"
+import { useSettings } from "@/context/settings"
 import { createFileTabListSync } from "@/pages/session/file-tab-scroll"
 import { FileTabContent } from "@/pages/session/file-tabs"
 import { createOpenSessionFileTab, createSessionTabs, getTabReorderIndex, type Sizing } from "@/pages/session/helpers"
@@ -39,6 +41,8 @@ export function SessionSidePanel(props: {
   size: Sizing
 }) {
   const layout = useLayout()
+  const platform = usePlatform()
+  const settings = useSettings()
   const file = useFile()
   const language = useLanguage()
   const command = useCommand()
@@ -46,9 +50,10 @@ export function SessionSidePanel(props: {
   const { sessionKey, tabs, view } = useSessionLayout()
 
   const isDesktop = createMediaQuery("(min-width: 768px)")
+  const shown = createMemo(() => platform.platform !== "desktop" || settings.general.showFileTree())
 
   const reviewOpen = createMemo(() => isDesktop() && view().reviewPanel.opened())
-  const fileOpen = createMemo(() => isDesktop() && layout.fileTree.opened())
+  const fileOpen = createMemo(() => isDesktop() && shown() && layout.fileTree.opened())
   const open = createMemo(() => reviewOpen() || fileOpen())
   const reviewTab = createMemo(() => isDesktop())
   const panelWidth = createMemo(() => {
