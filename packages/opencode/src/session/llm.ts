@@ -7,7 +7,7 @@ import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { Context, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
 import { streamText, wrapLanguageModel, type ModelMessage, type Tool } from "ai"
-import type { LLMEvent } from "@opencode-ai/llm"
+import { LLMEvent, Usage, type FinishReason, type ProviderMetadata } from "@opencode-ai/llm"
 import { LLMClient, RequestExecutor, WebSocketExecutor } from "@opencode-ai/llm/route"
 import type { LLMClientService } from "@opencode-ai/llm/route"
 import { GitLabWorkflowLanguageModel } from "gitlab-ai-provider"
@@ -370,11 +370,41 @@ const live: Layer.Layer<
             // Adapter seam: both runtimes expose the same LLMEvent stream. Native
             // already returns one; AI SDK streams are converted here.
             const state = LLMAISDK.adapterState()
+            let lastStepFinish: { reason: FinishReason; usage?: Usage; providerMetadata?: ProviderMetadata } | undefined
+
             return Stream.fromAsyncIterable(result.result.fullStream, (e) =>
               e instanceof Error ? e : new Error(String(e)),
             ).pipe(
               Stream.mapEffect((event) => LLMAISDK.toLLMEvents(state, event)),
               Stream.flatMap((events) => Stream.fromIterable(events)),
+              Stream.filter((event) => event.type !== "finish"),
+              Stream.tap((event) =>
+                Effect.sync(() => {
+                  if (event.type === "step-finish") {
+                    lastStepFinish = { reason: event.reason, usage: event.usage, providerMetadata: event.providerMetadata }
+                  }
+                }),
+              ),
+              Stream.concat(
+                Stream.fromEffect(
+                  Effect.tryPromise(async () => {
+                    const resp = await result.result.response
+                    const resolvedModelId = resp?.modelId as string | undefined
+                    if (!resolvedModelId || resolvedModelId === input.model.api.id) return []
+                    if (!lastStepFinish) return []
+                    return [
+                      LLMEvent.finish({
+                        reason: lastStepFinish.reason,
+                        usage: lastStepFinish.usage,
+                        providerMetadata: lastStepFinish.providerMetadata,
+                        resolvedModelId,
+                      }),
+                    ]
+                  }).pipe(
+                    Effect.orElseSucceed(() => []),
+                  ),
+                ).pipe(Stream.flatMap((events) => Stream.fromIterable(events))),
+              ),
             )
           }),
         ),

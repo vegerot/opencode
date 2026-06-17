@@ -839,6 +839,9 @@ export const layer = Layer.effect(
             return
 
           case "finish":
+            if (value.resolvedModelId) {
+              ctx.assistantMessage.resolvedModelId = value.resolvedModelId
+            }
             return
         }
       })

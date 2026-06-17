@@ -843,6 +843,10 @@ export function reduceSessionData(input: SessionDataInput): SessionDataOutput {
       next = { status: "assistant responding" }
     }
 
+    if (info.resolvedModelId) {
+      next = { ...next, resolvedModelId: info.resolvedModelId }
+    }
+
     const usage = formatUsage(
       info.tokens,
       input.limits[modelKey(info.providerID, info.modelID)],
