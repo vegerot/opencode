@@ -504,6 +504,36 @@ describe("session.llm.ai-sdk adapter", () => {
     expect(result.tokens.cache.read).toBe(200)
   })
 
+  test("captures OpenRouter cost from AI SDK raw usage per step", async () => {
+    const events = await adapt([
+      {
+        type: "finish-step",
+        response: { id: "gen-test", timestamp: new Date(0), modelId: "openai/gpt-5.4-mini" },
+        finishReason: "stop",
+        rawFinishReason: "stop",
+        usage: {
+          inputTokens: 7,
+          outputTokens: 11,
+          totalTokens: 18,
+          inputTokenDetails: { noCacheTokens: undefined, cacheReadTokens: undefined, cacheWriteTokens: undefined },
+          outputTokenDetails: { textTokens: undefined, reasoningTokens: undefined },
+          raw: {
+            prompt_tokens: 7,
+            completion_tokens: 11,
+            total_tokens: 18,
+            cost: 0.00005475,
+          },
+        },
+        providerMetadata: { openrouter: {} },
+      },
+    ])
+
+    expect(events).toHaveLength(1)
+    const stepFinish = events[0]
+    if (stepFinish.type !== "step-finish") throw new Error("expected step-finish")
+    expect(stepFinish.usage?.cost).toBe(0.00005475)
+  })
+
   test("captures Copilot billed usage from raw Anthropic message deltas per step", async () => {
     const events = await adapt([
       uncheckedAdapterEvent({
