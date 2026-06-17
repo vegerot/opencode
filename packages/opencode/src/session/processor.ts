@@ -690,6 +690,13 @@ export const layer = Layer.effect(
             })
             return
 
+          case "model-info":
+            if (value.modelId !== ctx.model.id) {
+              ctx.assistantMessage.resolvedModelId = value.modelId
+              yield* session.updateMessage(ctx.assistantMessage)
+            }
+            return
+
           case "step-finish": {
             const completedSnapshot = yield* snapshot.track()
             yield* Effect.forEach(Object.keys(ctx.reasoningMap), finishReasoning)
@@ -716,6 +723,9 @@ export const layer = Layer.effect(
             ctx.assistantMessage.finish = value.reason
             ctx.assistantMessage.cost += usage.cost
             ctx.assistantMessage.tokens = usage.tokens
+            if (value.modelId && value.modelId !== ctx.model.id) {
+              ctx.assistantMessage.resolvedModelId = value.modelId
+            }
             yield* session.updatePart({
               id: PartID.ascending(),
               reason: value.reason,
@@ -757,6 +767,10 @@ export const layer = Layer.effect(
           }
 
           case "text-start":
+            if (value.resolvedModelId && value.resolvedModelId !== ctx.model.id) {
+              ctx.assistantMessage.resolvedModelId = value.resolvedModelId
+              yield* session.updateMessage(ctx.assistantMessage)
+            }
             if (!ctx.assistantMessage.summary) {
               // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
               if (mirrorAssistant) {

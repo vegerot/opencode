@@ -373,6 +373,8 @@ export const createLLMEventPublisher = (events: EventV2.Interface, input: Input)
         })
         return
       }
+      case "model-info":
+        return
       case "step-finish":
         yield* flush()
         yield* events.publish(SessionEvent.Step.Ended, {

@@ -15,6 +15,7 @@ export function adapterState() {
     currentReasoningID: undefined as string | undefined,
     toolNames: {} as Record<string, string>,
     copilotTotalNanoAiu: undefined as number | undefined,
+    resolvedModelId: undefined as string | undefined,
   }
 }
 
@@ -104,6 +105,7 @@ export function toLLMEvents(
             reason: finishReason(event.finishReason),
             usage: usage(event.usage),
             providerMetadata: metadata,
+            modelId: event.response.modelId,
           }),
         ]
       })
@@ -130,6 +132,7 @@ export function toLLMEvents(
           LLMEvent.textStart({
             id: state.currentTextID,
             providerMetadata: providerMetadata(event.providerMetadata),
+            resolvedModelId: state.resolvedModelId,
           }),
         ]
       })
@@ -274,6 +277,12 @@ export function toLLMEvents(
     case "raw":
       return Effect.sync(() => {
         state.copilotTotalNanoAiu = copilotTotalNanoAiu(event.rawValue) ?? state.copilotTotalNanoAiu
+        const raw = event.rawValue
+        const model = raw && typeof raw === "object" ? (raw as Record<string, unknown>).model : undefined
+        if (!state.resolvedModelId && typeof model === "string") {
+          state.resolvedModelId = model
+          return [LLMEvent.modelInfo({ modelId: model })]
+        }
         return []
       })
 

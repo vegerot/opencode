@@ -85,6 +85,7 @@ export const TextStart = Schema.Struct({
   type: Schema.tag("text-start"),
   id: ContentBlockID,
   providerMetadata: Schema.optional(ProviderMetadata),
+  resolvedModelId: Schema.optional(Schema.String),
 }).annotate({ identifier: "LLM.Event.TextStart" })
 export type TextStart = Schema.Schema.Type<typeof TextStart>
 
@@ -180,12 +181,19 @@ export const ToolError = Schema.Struct({
 }).annotate({ identifier: "LLM.Event.ToolError" })
 export type ToolError = Schema.Schema.Type<typeof ToolError>
 
+export const ModelInfo = Schema.Struct({
+  type: Schema.tag("model-info"),
+  modelId: Schema.String,
+}).annotate({ identifier: "LLM.Event.ModelInfo" })
+export type ModelInfo = Schema.Schema.Type<typeof ModelInfo>
+
 export const StepFinish = Schema.Struct({
   type: Schema.tag("step-finish"),
   index: Schema.Number,
   reason: FinishReason,
   usage: Schema.optional(Usage),
   providerMetadata: Schema.optional(ProviderMetadata),
+  modelId: Schema.optional(Schema.String),
 }).annotate({ identifier: "LLM.Event.StepFinish" })
 export type StepFinish = Schema.Schema.Type<typeof StepFinish>
 
@@ -221,6 +229,7 @@ const llmEventTagged = Schema.Union([
   ToolCall,
   ToolResult,
   ToolError,
+  ModelInfo,
   StepFinish,
   Finish,
   ProviderErrorEvent,
@@ -263,6 +272,7 @@ export const LLMEvent = Object.assign(llmEventTagged, {
       output: input.output === undefined ? undefined : ToolOutput.make(input.output.structured, input.output.content),
     }),
   toolError: (input: WithID<ToolError, ToolCallID>) => ToolError.make({ ...input, id: toolCallID(input.id) }),
+  modelInfo: ModelInfo.make,
   stepFinish: (input: WithUsage<StepFinish>) =>
     StepFinish.make({
       ...input,
@@ -288,6 +298,7 @@ export const LLMEvent = Object.assign(llmEventTagged, {
     toolCall: llmEventTagged.guards["tool-call"],
     toolResult: llmEventTagged.guards["tool-result"],
     toolError: llmEventTagged.guards["tool-error"],
+    modelInfo: llmEventTagged.guards["model-info"],
     stepFinish: llmEventTagged.guards["step-finish"],
     finish: llmEventTagged.guards.finish,
     providerError: llmEventTagged.guards["provider-error"],

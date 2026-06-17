@@ -7,14 +7,13 @@ import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { Context, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
 import { streamText, wrapLanguageModel, type ModelMessage, type Tool } from "ai"
-import { LLMEvent, Usage, type FinishReason, type ProviderMetadata } from "@opencode-ai/llm"
+import { LLMEvent } from "@opencode-ai/llm"
 import { LLMClient, RequestExecutor, WebSocketExecutor } from "@opencode-ai/llm/route"
 import type { LLMClientService } from "@opencode-ai/llm/route"
 import { GitLabWorkflowLanguageModel } from "gitlab-ai-provider"
 import { ProviderTransform } from "@/provider/transform"
 import { Config } from "@/config/config"
 import type { Agent } from "@/agent/agent"
-import type { MessageV2 } from "./message-v2"
 import { Plugin } from "@/plugin"
 import { Permission } from "@/permission"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -273,11 +272,19 @@ const live: Layer.Layer<
         "llm.provider": input.model.providerID,
         "llm.model": input.model.id,
       })
+      const includeRawChunks =
+        input.model.providerID.includes("github-copilot") ||
+        input.model.providerID.includes("openrouter") ||
+        input.model.api.npm === "@openrouter/ai-sdk-provider" ||
+        input.model.api.npm === "@llmgateway/ai-sdk-provider" ||
+        input.model.api.npm === "@ai-sdk/openai-compatible"
+
       // Default runtime path: AI SDK owns provider execution and tool dispatch;
       // LLMAISDK.toLLMEvents below normalizes fullStream parts for the processor.
       return {
         type: "ai-sdk" as const,
         result: streamText({
+          includeRawChunks,
           onError(error) {
             bridge.fork(
               Effect.logError("stream error", {
@@ -291,8 +298,6 @@ const live: Layer.Layer<
               }),
             )
           },
-          // Copilot returns the authoritative billed amount only in provider-specific response fields.
-          includeRawChunks: input.model.providerID.includes("github-copilot"),
           async experimental_repairToolCall(failed) {
             const lower = failed.toolCall.toolName.toLowerCase()
             if (lower !== failed.toolCall.toolName && prepared.tools[lower]) {
@@ -370,41 +375,12 @@ const live: Layer.Layer<
             // Adapter seam: both runtimes expose the same LLMEvent stream. Native
             // already returns one; AI SDK streams are converted here.
             const state = LLMAISDK.adapterState()
-            let lastStepFinish: { reason: FinishReason; usage?: Usage; providerMetadata?: ProviderMetadata } | undefined
 
             return Stream.fromAsyncIterable(result.result.fullStream, (e) =>
               e instanceof Error ? e : new Error(String(e)),
             ).pipe(
               Stream.mapEffect((event) => LLMAISDK.toLLMEvents(state, event)),
               Stream.flatMap((events) => Stream.fromIterable(events)),
-              Stream.filter((event) => event.type !== "finish"),
-              Stream.tap((event) =>
-                Effect.sync(() => {
-                  if (event.type === "step-finish") {
-                    lastStepFinish = { reason: event.reason, usage: event.usage, providerMetadata: event.providerMetadata }
-                  }
-                }),
-              ),
-              Stream.concat(
-                Stream.fromEffect(
-                  Effect.tryPromise(async () => {
-                    const resp = await result.result.response
-                    const resolvedModelId = resp?.modelId as string | undefined
-                    if (!resolvedModelId || resolvedModelId === input.model.api.id) return []
-                    if (!lastStepFinish) return []
-                    return [
-                      LLMEvent.finish({
-                        reason: lastStepFinish.reason,
-                        usage: lastStepFinish.usage,
-                        providerMetadata: lastStepFinish.providerMetadata,
-                        resolvedModelId,
-                      }),
-                    ]
-                  }).pipe(
-                    Effect.orElseSucceed(() => []),
-                  ),
-                ).pipe(Stream.flatMap((events) => Stream.fromIterable(events))),
-              ),
             )
           }),
         ),
