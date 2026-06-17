@@ -230,6 +230,7 @@ export const createLLMEventPublisher = (events: EventV2.Interface, input: Input)
           assistantMessageID: yield* startAssistant(),
           timestamp: yield* timestamp,
           textID: event.id,
+          resolvedModelId: event.resolvedModelId,
         })
         return
       case "text-delta":
@@ -374,6 +375,12 @@ export const createLLMEventPublisher = (events: EventV2.Interface, input: Input)
         return
       }
       case "model-info":
+        yield* events.publish(SessionEvent.Step.ModelInfo, {
+          sessionID: input.sessionID,
+          timestamp: yield* timestamp,
+          assistantMessageID: yield* startAssistant(),
+          resolvedModelId: event.modelId,
+        })
         return
       case "step-finish":
         yield* flush()
@@ -384,6 +391,7 @@ export const createLLMEventPublisher = (events: EventV2.Interface, input: Input)
           finish: event.reason,
           cost: 0,
           tokens: tokens(event.usage),
+          resolvedModelId: event.modelId,
         })
         return
       case "finish":

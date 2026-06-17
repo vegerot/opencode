@@ -208,12 +208,18 @@ export function update(adapter: Adapter, event: SessionEvent.Event) {
           )
         })
       },
+      "session.next.step.model.info": (event) => {
+        return updateOwnedAssistant(event.data.assistantMessageID, (draft) => {
+          draft.resolvedModelId = event.data.resolvedModelId
+        })
+      },
       "session.next.step.ended": (event) => {
         return updateOwnedAssistant(event.data.assistantMessageID, (draft) => {
           draft.time.completed = event.data.timestamp
           draft.finish = event.data.finish
           draft.cost = event.data.cost
           draft.tokens = event.data.tokens
+          if (event.data.resolvedModelId) draft.resolvedModelId = event.data.resolvedModelId
           if (event.data.snapshot) draft.snapshot = { ...draft.snapshot, end: event.data.snapshot }
         })
       },
@@ -226,6 +232,7 @@ export function update(adapter: Adapter, event: SessionEvent.Event) {
       },
       "session.next.text.started": (event) => {
         return updateOwnedAssistant(event.data.assistantMessageID, (draft) => {
+          if (event.data.resolvedModelId) draft.resolvedModelId = event.data.resolvedModelId
           draft.content.push(
             castDraft(new SessionMessage.AssistantText({ type: "text", id: event.data.textID, text: "" })),
           )

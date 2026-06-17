@@ -334,6 +334,15 @@ describe("session.llm.ai-sdk adapter", () => {
     ).toEqual([])
   })
 
+  test("emits model-info when raw provider chunk includes resolved model", async () => {
+    const events = await adapt([
+      uncheckedAdapterEvent({ type: "raw", rawValue: { model: "openai/gpt-5.4-mini-20260317" } }),
+      uncheckedAdapterEvent({ type: "raw", rawValue: { model: "anthropic/claude-sonnet-4.5" } }),
+    ])
+
+    expect(events).toEqual([{ type: "model-info", modelId: "openai/gpt-5.4-mini-20260317" }])
+  })
+
   test("preserves tool-error cause", async () => {
     const error = new PermissionV1.RejectedError()
     const events = await Effect.runPromise(

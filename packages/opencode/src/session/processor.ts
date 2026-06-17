@@ -693,6 +693,14 @@ export const layer = Layer.effect(
           case "model-info":
             if (value.modelId !== ctx.model.id) {
               ctx.assistantMessage.resolvedModelId = value.modelId
+              if (!ctx.assistantMessage.summary && mirrorAssistant) {
+                yield* events.publish(SessionEvent.Step.ModelInfo, {
+                  sessionID: ctx.sessionID,
+                  assistantMessageID: yield* ensureV2AssistantMessage(),
+                  timestamp: DateTime.makeUnsafe(Date.now()),
+                  resolvedModelId: value.modelId,
+                })
+              }
               yield* session.updateMessage(ctx.assistantMessage)
             }
             return
@@ -715,6 +723,7 @@ export const layer = Layer.effect(
                   cost: usage.cost,
                   tokens: usage.tokens,
                   snapshot: completedSnapshot,
+                  resolvedModelId: value.modelId && value.modelId !== ctx.model.id ? value.modelId : undefined,
                   timestamp: DateTime.makeUnsafe(Date.now()),
                 })
                 ctx.v2AssistantMessageID = undefined
@@ -779,6 +788,7 @@ export const layer = Layer.effect(
                   assistantMessageID: yield* ensureV2AssistantMessage(),
                   timestamp: DateTime.makeUnsafe(Date.now()),
                   textID: value.id,
+                  resolvedModelId: value.resolvedModelId,
                 })
               }
             }

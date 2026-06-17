@@ -840,7 +840,7 @@ export function reduceSessionData(input: SessionDataInput): SessionDataOutput {
     let next: FooterPatch | undefined
     if (!data.announced) {
       data.announced = true
-      next = { status: "assistant responding" }
+      next = { status: "assistant responding", resolvedModelId: "" }
     }
 
     if (info.resolvedModelId) {

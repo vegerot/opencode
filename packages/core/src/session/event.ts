@@ -186,6 +186,17 @@ export namespace Step {
   })
   export type Started = typeof Started.Type
 
+  export const ModelInfo = EventV2.define({
+    type: "session.next.step.model.info",
+    ...options,
+    schema: {
+      ...Base,
+      assistantMessageID: SessionMessageID.ID,
+      resolvedModelId: Schema.String,
+    },
+  })
+  export type ModelInfo = typeof ModelInfo.Type
+
   export const Ended = EventV2.define({
     type: "session.next.step.ended",
     ...stepSettlementOptions,
@@ -204,6 +215,7 @@ export namespace Step {
         }),
       }),
       snapshot: Schema.String.pipe(Schema.optional),
+      resolvedModelId: Schema.String.pipe(Schema.optional),
     },
   })
   export type Ended = typeof Ended.Type
@@ -228,6 +240,7 @@ export namespace Text {
       ...Base,
       assistantMessageID: SessionMessageID.ID,
       textID: Schema.String,
+      resolvedModelId: Schema.String.pipe(Schema.optional),
     },
   })
   export type Started = typeof Started.Type
@@ -481,6 +494,7 @@ const DurableDefinitions = [
   Shell.Started,
   Shell.Ended,
   Step.Started,
+  Step.ModelInfo,
   Step.Ended,
   Step.Failed,
   Text.Started,

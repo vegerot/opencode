@@ -272,19 +272,13 @@ const live: Layer.Layer<
         "llm.provider": input.model.providerID,
         "llm.model": input.model.id,
       })
-      const includeRawChunks =
-        input.model.providerID.includes("github-copilot") ||
-        input.model.providerID.includes("openrouter") ||
-        input.model.api.npm === "@openrouter/ai-sdk-provider" ||
-        input.model.api.npm === "@llmgateway/ai-sdk-provider" ||
-        input.model.api.npm === "@ai-sdk/openai-compatible"
 
       // Default runtime path: AI SDK owns provider execution and tool dispatch;
       // LLMAISDK.toLLMEvents below normalizes fullStream parts for the processor.
       return {
         type: "ai-sdk" as const,
         result: streamText({
-          includeRawChunks,
+          includeRawChunks: shouldIncludeRawChunks(input.model),
           onError(error) {
             bridge.fork(
               Effect.logError("stream error", {
@@ -389,6 +383,16 @@ const live: Layer.Layer<
     return Service.of({ stream })
   }),
 )
+
+function shouldIncludeRawChunks(model: Provider.Model) {
+  return (
+    model.providerID.includes("github-copilot") ||
+    model.providerID.includes("openrouter") ||
+    model.api.npm === "@openrouter/ai-sdk-provider" ||
+    model.api.npm === "@llmgateway/ai-sdk-provider" ||
+    model.api.npm === "@ai-sdk/openai-compatible"
+  )
+}
 
 export const layer = live.pipe(Layer.provide(Permission.defaultLayer), Layer.provide(EventV2Bridge.defaultLayer))
 
