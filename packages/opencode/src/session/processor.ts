@@ -716,6 +716,9 @@ export const layer = Layer.effect(
             ctx.assistantMessage.finish = value.reason
             ctx.assistantMessage.cost += usage.cost
             ctx.assistantMessage.tokens = usage.tokens
+            if (value.modelId && value.modelId !== ctx.model.id) {
+              ctx.assistantMessage.resolvedModelId = value.modelId
+            }
             yield* session.updatePart({
               id: PartID.ascending(),
               reason: value.reason,
