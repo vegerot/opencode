@@ -258,10 +258,15 @@ function migrateModel(info: typeof ConfigProviderV1.Model.Type) {
     headers: info.headers,
     variants:
       info.variants &&
-      Object.entries(info.variants).map(([id, options]) => ({
-        id,
-        settings: ConfigProviderOptionsV1.model(options),
-      })),
+      Object.entries(info.variants).map(([id, options]) => {
+        const variant = ConfigProviderOptionsV1.provider(options)
+        return {
+          id,
+          settings: variant.settings,
+          headers: variant.headers,
+          body: variant.body,
+        }
+      }),
     cost: costs,
     disabled: info.status === "deprecated" ? true : undefined,
     limit: info.limit && {

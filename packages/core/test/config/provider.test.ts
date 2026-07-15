@@ -4,6 +4,8 @@ import { Effect, Schema } from "effect"
 import { Catalog } from "@opencode-ai/core/catalog"
 import { Config } from "@opencode-ai/core/config"
 import { ConfigProviderPlugin } from "@opencode-ai/core/config/plugin/provider"
+import { ConfigMigrateV1 } from "@opencode-ai/core/v1/config/migrate"
+import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { Integration } from "@opencode-ai/core/integration"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { PluginV2 } from "@opencode-ai/core/plugin"
@@ -49,6 +51,30 @@ function withEnv<A, E, R>(vars: Record<string, string | undefined>, effect: () =
 const decode = Schema.decodeUnknownSync(Config.Info)
 
 describe("ConfigProviderPlugin.Plugin", () => {
+  it.effect("preserves legacy variant header overlays", () =>
+    Effect.sync(() => {
+      const migrated = ConfigMigrateV1.migrate(
+        Schema.decodeUnknownSync(ConfigV1.Info)({
+          provider: {
+            frontier: {
+              models: {
+                pareto: {
+                  variants: {
+                    high: { headers: { "X-Pareto-P": "0.9" } },
+                  },
+                },
+              },
+            },
+          },
+        }),
+      )
+
+      expect(migrated.providers?.frontier?.models?.pareto?.variants).toEqual([
+        { id: "high", settings: {}, headers: { "X-Pareto-P": "0.9" }, body: undefined },
+      ])
+    }),
+  )
+
   it.effect("keeps configured model variant bodies unchanged", () =>
     Effect.gen(function* () {
       const catalog = yield* Catalog.Service
