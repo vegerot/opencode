@@ -33,6 +33,11 @@ const tokens = (usage: Usage | undefined) => {
   }
 }
 
+const cost = (usage: Usage | undefined) => {
+  if (usage?.cost === undefined || !Number.isFinite(usage.cost) || usage.cost < 0) return undefined
+  return Money.USD.make(usage.cost)
+}
+
 const record = (value: unknown): Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : { value }
 
@@ -78,6 +83,7 @@ export const createLLMEventPublisher = (events: Pick<EventV2.Interface, "publish
     | {
         readonly finish: Extract<LLMEvent, { type: "step-finish" }>["reason"]
         readonly tokens: ReturnType<typeof tokens>
+        readonly cost?: Money.USD
         readonly modelId?: string
       }
     | undefined
@@ -430,7 +436,7 @@ export const createLLMEventPublisher = (events: Pick<EventV2.Interface, "publish
       case "step-finish":
         yield* flush()
         if (stepSettlement) return yield* Effect.die(new Error("Duplicate step finish"))
-        stepSettlement = { finish: event.reason, tokens: tokens(event.usage), modelId: event.modelId }
+        stepSettlement = { finish: event.reason, tokens: tokens(event.usage), cost: cost(event.usage), modelId: event.modelId }
         if (event.reason === "content-filter") {
           providerFailed = true
           yield* failAssistant({ type: "provider.content-filter", message: "Provider blocked the response" }, true)

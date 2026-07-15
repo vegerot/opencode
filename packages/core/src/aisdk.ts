@@ -633,6 +633,7 @@ function streamPartEvents(
 }
 
 function usage(input: Extract<LanguageModelV3StreamPart, { type: "finish" }>["usage"]): UsageInput | undefined {
+  const cost = input.raw?.cost
   const output = {
     inputTokens: input.inputTokens.total,
     nonCachedInputTokens: input.inputTokens.noCache,
@@ -644,6 +645,7 @@ function usage(input: Extract<LanguageModelV3StreamPart, { type: "finish" }>["us
       input.inputTokens.total === undefined || input.outputTokens.total === undefined
         ? undefined
         : input.inputTokens.total + input.outputTokens.total,
+    cost: typeof cost === "number" && Number.isFinite(cost) && cost >= 0 ? cost : undefined,
   }
   return Object.values(output).some((value) => value !== undefined) ? output : undefined
 }

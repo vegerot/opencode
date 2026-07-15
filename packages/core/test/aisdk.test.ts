@@ -3,12 +3,15 @@ import { AISDK } from "@opencode-ai/core/aisdk"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { LLM, Message } from "@opencode-ai/llm"
-import { LLMClient } from "@opencode-ai/llm/route"
+import { LLMClient, RequestExecutor } from "@opencode-ai/llm/route"
 import { expect } from "bun:test"
-import { Effect } from "effect"
+import { Effect, Layer, Stream } from "effect"
 import { testEffect } from "./lib/effect"
 
-const it = testEffect(AISDK.locationLayer)
+const client = LLMClient.layer.pipe(
+  Layer.provide(Layer.succeed(RequestExecutor.Service, { execute: () => Effect.die("unused") })),
+)
+const it = testEffect(Layer.merge(AISDK.locationLayer, client))
 
 const model = (packageName: string, settings: Record<string, unknown> = {}) =>
   ModelV2.Info.make({
@@ -138,5 +141,39 @@ it.effect("projects replay metadata onto AI SDK prompt parts", () =>
         ],
       },
     ])
+  }),
+)
+
+it.effect("preserves native provider cost from AI SDK usage", () =>
+  Effect.gen(function* () {
+    const aisdk = yield* AISDK.Service
+    yield* aisdk.hook.sdk((event) => {
+      event.sdk = {
+        languageModel: () => ({
+          doStream: async () => ({
+            stream: new ReadableStream({
+              start(controller) {
+                controller.enqueue({
+                  type: "finish",
+                  finishReason: { unified: "stop", raw: "stop" },
+                  usage: {
+                    inputTokens: { total: 7, noCache: 7, cacheRead: undefined, cacheWrite: undefined },
+                    outputTokens: { total: 11, text: 11, reasoning: undefined },
+                    raw: { cost: 0.00005475 },
+                  },
+                })
+                controller.close()
+              },
+            }),
+          }),
+        }),
+      }
+    })
+
+    const resolved = yield* aisdk.model(model("@openrouter/ai-sdk-provider"))
+    const events = yield* LLMClient.stream(LLM.request({ model: resolved, prompt: "Hello" })).pipe(Stream.runCollect)
+    const finish = Array.from(events).find((event) => event.type === "step-finish")
+
+    expect(finish).toMatchObject({ usage: { cost: 0.00005475 } })
   }),
 )

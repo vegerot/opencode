@@ -299,7 +299,7 @@ const layer = Layer.effect(
       )
 
       const stepUsage = (settlement: NonNullable<ReturnType<typeof publisher.stepSettlement>>) => ({
-        cost: calculateCost(resolved.cost, settlement.tokens),
+        cost: settlement.cost ?? calculateCost(resolved.cost, settlement.tokens),
         tokens: settlement.tokens,
       })
 

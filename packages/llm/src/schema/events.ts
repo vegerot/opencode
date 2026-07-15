@@ -57,6 +57,7 @@ export class Usage extends Schema.Class<Usage>("LLM.Usage")({
   reasoningTokens: Schema.optional(Schema.Number),
   totalTokens: Schema.optional(Schema.Number),
   providerMetadata: Schema.optional(ProviderMetadata),
+  cost: Schema.optional(Schema.Number),
 }) {
   /**
    * Visible output tokens — `outputTokens` minus `reasoningTokens`, clamped
