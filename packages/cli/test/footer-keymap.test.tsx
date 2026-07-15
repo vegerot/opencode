@@ -20,6 +20,7 @@ test("down opens subagents from an empty prompt", async () => {
     first: false,
     interrupt: 0,
     exit: 0,
+    resolvedModelId: "",
   })
   const [view] = createSignal<FooterView>({ type: "prompt" })
   const [subagents] = createSignal<FooterSubagentState>({

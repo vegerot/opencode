@@ -247,6 +247,7 @@ export namespace Step {
       finish: FinishReason,
       cost: Money.USD,
       tokens: TokenUsage.Info,
+      modelId: Schema.String.pipe(optional),
       snapshot: Snapshot.ID.pipe(optional),
       files: Schema.Array(RelativePath).pipe(optional),
     },

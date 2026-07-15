@@ -154,6 +154,8 @@ const OpenAIChatChoice = Schema.Struct({
 })
 
 export const OpenAIChatEvent = Schema.Struct({
+  id: optionalNull(Schema.String),
+  model: optionalNull(Schema.String),
   choices: Schema.Array(OpenAIChatChoice),
   usage: optionalNull(OpenAIChatUsage),
 })
@@ -164,6 +166,7 @@ interface ParserState {
   readonly tools: ToolStream.State<number>
   readonly toolCallEvents: ReadonlyArray<LLMEvent>
   readonly usage?: Usage
+  readonly modelId?: string
   readonly finishReason?: FinishReason
   readonly lifecycle: Lifecycle.State
 }
@@ -404,6 +407,7 @@ const step = (state: ParserState, event: OpenAIChatEvent) =>
   Effect.gen(function* () {
     const events: LLMEvent[] = []
     const usage = mapUsage(event.usage) ?? state.usage
+    const modelId = event.model ?? state.modelId
     const choice = event.choices[0]
     const finishReason = choice?.finish_reason ? mapFinishReason(choice.finish_reason) : state.finishReason
     const delta = choice?.delta
@@ -448,6 +452,7 @@ const step = (state: ParserState, event: OpenAIChatEvent) =>
         tools: finished?.tools ?? tools,
         toolCallEvents: finished?.events ?? state.toolCallEvents,
         usage,
+        modelId,
         finishReason,
         lifecycle,
       },
@@ -461,7 +466,7 @@ const finishEvents = (state: ParserState): ReadonlyArray<LLMEvent> => {
   const reason = state.finishReason === "stop" && hasToolCalls ? "tool-calls" : state.finishReason
   const lifecycle = state.toolCallEvents.length ? Lifecycle.stepStart(state.lifecycle, events) : state.lifecycle
   events.push(...state.toolCallEvents)
-  if (reason) Lifecycle.finish(lifecycle, events, { reason, usage: state.usage })
+  if (reason) Lifecycle.finish(lifecycle, events, { reason, usage: state.usage, modelId: state.modelId })
   return events
 }
 

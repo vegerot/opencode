@@ -501,7 +501,7 @@ function providerOptions(input: LLMRequest["providerOptions"]): SharedV3Provider
 }
 
 function streamLanguage(language: LanguageModelV3, options: LanguageModelV3CallOptions) {
-  const state = { step: 0, toolNames: {} as Record<string, string> }
+  const state = { step: 0, toolNames: {} as Record<string, string>, modelId: undefined as string | undefined }
   return Stream.concat(
     Stream.make(LLMEvent.stepStart({ index: state.step })),
     Stream.unwrap(
@@ -524,16 +524,18 @@ function streamLanguage(language: LanguageModelV3, options: LanguageModelV3CallO
 }
 
 function streamPartEvents(
-  state: { step: number; toolNames: Record<string, string> },
+  state: { step: number; toolNames: Record<string, string>; modelId?: string },
   event: LanguageModelV3StreamPart,
 ): Effect.Effect<ReadonlyArray<LLMEvent>, LLMError> {
   switch (event.type) {
     case "stream-start":
-    case "response-metadata":
     case "raw":
     case "file":
     case "source":
     case "tool-approval-request":
+      return Effect.succeed([])
+    case "response-metadata":
+      state.modelId = event.modelId
       return Effect.succeed([])
     case "text-start":
       return Effect.succeed([
@@ -617,6 +619,7 @@ function streamPartEvents(
           reason: finishReason(event.finishReason),
           usage: usage(event.usage),
           providerMetadata: providerMetadata(event.providerMetadata),
+          modelId: state.modelId,
         }),
         LLMEvent.finish({
           reason: finishReason(event.finishReason),

@@ -334,7 +334,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
     },
   })
 
-  const write = (commits: StreamCommit[], patch?: { phase?: "idle" | "running"; status?: string; usage?: string }) => {
+  const write = (commits: StreamCommit[], patch?: { phase?: "idle" | "running"; status?: string; usage?: string; resolvedModelId?: string }) => {
     const visible = commits.at(-1)
     if (visible) {
       state.wait?.onVisibleOutput?.({
@@ -776,6 +776,7 @@ export async function createSessionTransport(input: StreamInput): Promise<Sessio
       const usage = total > 0 ? total.toLocaleString() : ""
       write([], {
         usage: event.data.cost ? `${usage} · ${money.format(event.data.cost)}` : usage,
+        ...(event.data.modelId ? { resolvedModelId: event.data.modelId } : {}),
       })
       return
     }

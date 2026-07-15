@@ -693,6 +693,7 @@ export type SessionStepEnded = {
     finish: "stop" | "length" | "tool-calls" | "content-filter" | "error" | "unknown"
     cost: MoneyUSD
     tokens: TokenUsageInfo
+    modelId?: string
     snapshot?: string
     files?: Array<string>
   }
@@ -1559,6 +1560,7 @@ export type AssistantMessage = {
   structured?: any | undefined
   variant?: string | undefined
   finish?: string | undefined
+  resolvedModelId?: string | undefined
 }
 
 export type RetryPart = {
@@ -2063,6 +2065,7 @@ export type SessionMessageAssistant = {
   tokens?: TokenUsageInfo
   error?: SessionStructuredError
   retry?: SessionMessageAssistantRetry
+  resolvedModelId?: string
 }
 
 export type IntegrationInfo = {

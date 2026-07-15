@@ -320,6 +320,7 @@ const layer = Layer.effect(
               assistantMessageID: yield* publisher.startAssistant(),
               finish: settlement.finish,
               ...stepUsage(settlement),
+              ...(settlement.modelId && settlement.modelId !== resolved.ref.id ? { modelId: settlement.modelId } : {}),
               snapshot: endSnapshot,
               files,
             }),
