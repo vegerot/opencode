@@ -213,6 +213,14 @@ describe("ACP service sessions", () => {
       title: `Session ${index + 1}`,
       time: { created: index + 1, updated: index + 1 },
     }))
+    const sessionListCalls: { directory?: string }[] = []
+    const experimentalSessionListCalls: { directory?: string; roots?: boolean; cursor?: number; limit?: number }[] = []
+    const listServerSessions = (input: { directory?: string; cursor?: number; limit?: number }) =>
+      sessions
+        .filter((session) => !input.directory || session.directory === input.directory)
+        .filter((session) => input.cursor === undefined || session.time.updated < input.cursor)
+        .toSorted((a, b) => b.time.updated - a.time.updated)
+        .slice(0, input.limit)
     const sdk = {
       global: {
         event: (input?: { signal?: AbortSignal }) => Promise.resolve({ stream: events.stream(input?.signal) }),
@@ -244,10 +252,12 @@ describe("ACP service sessions", () => {
       session: {
         create: () => Promise.resolve({ data: { id: "ses_new" } }),
         get: () => Promise.resolve({ data: { id: "ses_loaded" } }),
-        list: (input: { directory?: string }) =>
-          Promise.resolve({
+        list: (input: { directory?: string }) => {
+          sessionListCalls.push(input)
+          return Promise.resolve({
             data: input.directory ? sessions.filter((session) => session.directory === input.directory) : sessions,
-          }),
+          })
+        },
         messages: () => Promise.resolve({ data: messages }),
         prompt: async (input: { sessionID: string }) => {
           const response = await (options?.prompt?.(input) ??
@@ -295,6 +305,14 @@ describe("ACP service sessions", () => {
           return Promise.resolve({ data: { id: `fork_${input.sessionID}` } })
         },
       },
+      experimental: {
+        session: {
+          list: (input: { directory?: string; cursor?: number; limit?: number }) => {
+            experimentalSessionListCalls.push(input)
+            return Promise.resolve({ data: listServerSessions(input) })
+          },
+        },
+      },
       mcp: {
         add: (input: { name?: string }) => {
           if (input.name) mcpAdds.push(input.name)
@@ -330,6 +348,8 @@ describe("ACP service sessions", () => {
       summarizes,
       usageUpdates,
       events,
+      sessionListCalls,
+      experimentalSessionListCalls,
     }
   }
 
@@ -416,6 +436,15 @@ describe("ACP service sessions", () => {
         content: { type: "text", text: "hi there" },
       },
     ])
+  })
+
+  it("lists sessions through the global session endpoint", async () => {
+    const { service, sessionListCalls, experimentalSessionListCalls } = makeService()
+    const result = await Effect.runPromise(service.listSessions({}))
+
+    expect(result.sessions[0]?.sessionId).toBe("ses_102")
+    expect(sessionListCalls).toEqual([])
+    expect(experimentalSessionListCalls).toEqual([{ roots: true, limit: 101 }])
   })
 
   it("lists sessions sorted by updated time with cursor support", async () => {
@@ -1317,6 +1346,11 @@ describe("ACP service sessions", () => {
           create: () => Promise.resolve({ data: { id: session.sessionId } }),
           list: () => Promise.resolve({ data: [] }),
           prompt: () => Promise.reject({ name: "ProviderAuthError", data: { providerID: "test" } }),
+        },
+        experimental: {
+          session: {
+            list: () => Promise.resolve({ data: [] }),
+          },
         },
         mcp: {
           add: () => Promise.resolve({ data: {} }),
