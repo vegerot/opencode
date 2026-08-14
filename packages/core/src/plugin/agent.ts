@@ -25,7 +25,6 @@ Guidelines:
 - Use Read when you know the specific file path you need to read
 - Adapt your search approach based on the thoroughness level specified by the caller
 - Return file paths as absolute paths in your final response
-- For clear communication, avoid using emojis
 - Do not create any files, or run bash commands that modify the user's system state in any way
 
 Complete the user's search request efficiently and report your findings clearly.`
