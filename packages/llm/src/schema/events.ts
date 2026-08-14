@@ -186,6 +186,7 @@ export const StepFinish = Schema.Struct({
   reason: FinishReason,
   usage: Schema.optional(Usage),
   providerMetadata: Schema.optional(ProviderMetadata),
+  modelId: Schema.optional(Schema.String),
 }).annotate({ identifier: "LLM.Event.StepFinish" })
 export type StepFinish = Schema.Schema.Type<typeof StepFinish>
 

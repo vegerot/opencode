@@ -371,6 +371,7 @@ export type AssistantMessage = {
   structured?: unknown
   variant?: string
   finish?: string
+  resolvedModelId?: string
 }
 
 export type Message = UserMessage | AssistantMessage

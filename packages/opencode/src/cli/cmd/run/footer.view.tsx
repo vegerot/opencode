@@ -871,6 +871,11 @@ export function RunFooterView(props: RunFooterViewProps) {
                         <Show when={info().provider}>
                           {(provider) => <span style={{ fg: theme().muted }}> {provider()}</span>}
                         </Show>
+                        <Show when={props.state().resolvedModelId}>
+                          <text fg={theme().muted} wrapMode="none" truncate flexShrink={1}>
+                            {" "}({props.state().resolvedModelId})
+                          </text>
+                        </Show>
                         <Show when={info().variant}>
                           {(variant) => (
                             <>
