@@ -388,7 +388,7 @@ export const getUsage = (input: { model: Provider.Model; usage: Usage; metadata?
       : input.model.cost)
   const totalNanoAiu = input.metadata?.["copilot"]?.["totalNanoAiu"]
   return {
-    cost:
+    cost: input.usage.cost ?? (
       typeof totalNanoAiu === "number" && Number.isFinite(totalNanoAiu) && totalNanoAiu >= 0
         ? new Decimal(totalNanoAiu).div(100_000_000_000).toNumber()
         : safe(
@@ -401,7 +401,8 @@ export const getUsage = (input: { model: Provider.Model; usage: Usage; metadata?
               // charge reasoning tokens at the same rate as output tokens
               .add(new Decimal(tokens.reasoning).mul(costInfo?.output ?? 0).div(1_000_000))
               .toNumber(),
-          ),
+          )
+    ),
     tokens,
   }
 }
