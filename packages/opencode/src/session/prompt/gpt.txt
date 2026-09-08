@@ -76,8 +76,6 @@ Use inline code blocks for commands, paths, environment variables, function name
 
 Code samples or multi-line snippets should be wrapped in fenced code blocks. Include a language tag when possible.
 
-Don’t use emojis or em dashes unless explicitly instructed.
-
 ## Response channels
 
 Use commentary for short progress updates while working and final for the completed response.
