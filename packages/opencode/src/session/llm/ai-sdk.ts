@@ -107,6 +107,7 @@ export function toLLMEvents(
             reason: finishReason(event.finishReason),
             usage: usage(event.usage),
             providerMetadata: metadata,
+            modelId: event.response.modelId,
           }),
         ]
       })
