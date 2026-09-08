@@ -200,6 +200,7 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
           }),
       ...(input.parentSessionID ? { "x-parent-session-id": input.parentSessionID } : {}),
       ...input.model.headers,
+      ...(variant.headers ?? {}),
       ...headers,
     },
   }
